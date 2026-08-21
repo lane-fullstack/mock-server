@@ -10,8 +10,11 @@ src/
 │   ├── mock.ts       # Mock Router 与 mock.resource 能力
 │   ├── resource.ts   # Resource 的 CRUD、分页、搜索、过滤、排序实现
 │   └── schema.ts     # 统一的 OpenAPI Schema helper
-├── factories/        # 所有 Mock 数据生产逻辑
-├── routes/           # 所有接口注册与路由级 schema
+├── demo/             # 仅供参考的示例数据，不参与构建和运行
+├── factories/
+│   └── index.ts      # 所有 Mock 数据生产逻辑
+├── routes/
+│   └── index.ts      # 所有接口注册与路由级 schema
 ├── utils/            # 通用工具函数
 ├── types.ts          # 领域数据类型与公共类型
 └── config.ts         # 全局配置与初始化
@@ -20,10 +23,18 @@ src/
 目录规则：
 
 - `src/routes` 只负责注册接口、组装 factory 数据和声明 schema，不负责生产数据。
-- `src/factories` 负责生成完整的 Mock 数据，包括默认数据集合和单条数据生成函数。
+- `src/demo` 只存放参考数据或示例结构，不参与构建、运行和接口响应。
+- `src/factories/index.ts` 负责生成完整的 Mock 数据，包括默认数据集合和单条数据生成函数。
 - `src/core/schema.ts` 是唯一的 schema helper 来源。路由中不得自行创建 OpenAPI schema 工具。
 - `src/core` 只维护通用基础能力，不放具体业务数据或业务字段。
 - `src/utils` 只放与具体业务无关的可复用逻辑。
+
+`src/demo` 使用规则：
+
+- `src/demo` 已从 `tsconfig.json` 的检查范围排除。
+- routes、factories 和应用入口禁止导入 `src/demo` 中的文件。
+- 需要真正提供给接口的数据，必须根据参考内容在 `src/factories` 中实现。
+- demo 数据可以不满足生产类型或包含不完整字段，只用于帮助开发者理解数据结构和内容样例。
 
 ## 二、路由统一使用 `mock.resource`
 
@@ -31,7 +42,7 @@ src/
 
 ```ts
 import { schema } from '../core/schema.js'
-import { products } from '../factories/product.factory.js'
+import { products } from '../factories/index.js'
 import type { Product } from '../types.js'
 
 const productResource = mock.resource<Product>({
@@ -99,55 +110,61 @@ schema.object({
 - 关联已有组件时使用 `schema.ref()`，不要复制同一份 schema。
 - 搜索、过滤和排序字段必须是资源实际存在的字段，并与 `mock.resource` 的配置保持一致。
 
-## 四、路由模块拆分
+## 四、当前基础文件与后续模块拆分
 
-只有属于同一个业务模块的资源和接口才放在同一个路由文件中。不要按 HTTP 方法拆文件，也不要把所有业务长期堆在一个 `index.ts` 中。
+当前基础版本只保留两个生产入口文件：
 
-推荐结构：
+- `src/routes/index.ts`：注册当前资源、声明路由 schema，并挂载 Mock Router。
+- `src/factories/index.ts`：集中存放当前资源的数据生成函数和默认数据集合。
+
+后续新增业务时，必须按业务模块拆分文件，并由入口文件统一汇总：
 
 ```text
+src/factories/
+├── index.ts            # 入口与当前基础数据
+├── user.factory.ts     # 用户数据
+├── news.factory.ts     # 新闻数据
+└── auth.factory.ts     # 认证数据（如果需要）
+
 src/routes/
-├── index.ts          # 创建 mock、挂载各业务路由、汇总 OpenAPI
-├── users.ts          # 用户模块
-├── news.ts           # 新闻模块
-└── orders.ts         # 订单模块
+├── index.ts            # 创建 mock、挂载并汇总各模块路由
+├── users.ts            # 用户路由
+├── news.ts             # 新闻路由
+└── auth.ts             # 认证路由
 ```
 
-模块拆分标准：
+拆分规则：
 
-- 同一业务实体及其紧密相关资源，可以放在同一个文件。
-- 不同业务领域，即使接口数量很少，也应分开文件。
-- 一个文件中的路由应共享明确的业务上下文，避免出现无关资源。
-- 每个模块文件应保持“导入类型、导入 factory 数据、导入 schema、注册 resource”的结构。
-- `src/routes/index.ts` 只做路由模块汇总，不承载具体业务 schema 和数据生产逻辑。
+- 当前已有的基础内容可以继续放在两个 `index.ts` 中。
+- 新增用户、新闻、认证等业务时，分别创建对应的 factory 和 route 文件。
+- 同一业务模块的资源和接口放在同一个文件。
+- 不按 HTTP 方法拆文件。
 
-路由模块示例：
+路由文件示例：
 
 ```ts
 import { schema } from '../core/schema.js'
-import { products } from '../factories/product.factory.js'
+import { products } from '../factories/index.js'
 import type { Product } from '../types.js'
 
-export const registerProductRoutes = (mock: MockRouter): void => {
-  mock.resource<Product>({
-    name: 'Product',
-    path: '/api/products',
-    data: products,
-    methods: ['GET'],
-    schema: schema.object({
-      id: schema.integer(),
-      name: schema.string(),
-    }),
-    search: ['name'],
-  })
-}
+mock.resource<Product>({
+  name: 'Product',
+  path: '/api/products',
+  data: products,
+  methods: ['GET'],
+  schema: schema.object({
+    id: schema.integer(),
+    name: schema.string(),
+  }),
+  search: ['name'],
+})
 ```
 
-如果项目现阶段使用一个 `src/routes/index.ts`，新增接口仍应遵循以上模块边界；当不同业务模块开始增多时，再按业务拆成独立文件。
+新增业务时创建对应的模块文件，并在 `src/routes/index.ts` 中完成注册；不要把不同业务长期堆在入口文件中。
 
 ## 五、所有数据必须由 `src/factories` 生产
 
-所有 Resource 的 `data` 都必须来自 `src/factories`。数据生产不得放在路由文件、`src/data` 或 `src/core` 中。
+所有 Resource 的 `data` 都必须来自 `src/factories`。数据生产不得放在路由文件、`src/data`、`src/demo` 或 `src/core` 中。
 
 推荐 factory 结构：
 
@@ -180,7 +197,7 @@ export const products = createProducts(200)
 
 ## 六、命名与接口约定
 
-- 文件名使用小写 kebab-case 或当前项目既有命名风格；factory 统一使用 `<resource>.factory.ts`。
+- `src/routes/index.ts` 和 `src/factories/index.ts` 始终保留为入口文件；后续新增业务模块可在同级目录创建独立文件，并由入口统一汇总。
 - 资源名称使用单数形式，URL 使用复数形式。
 - 字段命名使用 camelCase。
 - 列表接口和详情接口由 `mock.resource` 自动生成，不重复手写。

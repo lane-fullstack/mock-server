@@ -1,8 +1,9 @@
 import { Router } from 'express'
 import { config } from '../config.js'
 import { createMockRouter } from '../core/mock.js'
-import { news, users } from '../factories/index.js'
 import { schema } from '../core/schema.js'
+import { news } from '../factories/news.factory.js'
+import { users } from '../factories/user.factory.js'
 import type { User } from '../types.js'
 import { asJsonObject, objectString } from '../utils/body.js'
 import { sendError, sendSuccess } from '../utils/response.js'
@@ -51,7 +52,6 @@ export const registeredResources = [
   }),
 ]
 
-// Login is an action rather than a CRUD resource, so it uses the custom route API.
 mock.post('/api/login', {
   summary: 'User login',
   tags: ['Auth'],

@@ -65,6 +65,9 @@ export const createMockResource = <T extends ResourceItem>(
   const name = options.name ?? options.singularName ?? 'Resource'
   const methods = options.methods ?? ALL_RESOURCE_METHODS
   const allows = (method: MockResourceMethod): boolean => methods.includes(method)
+  const searchFields = options.search ?? options.searchFields ?? []
+  const filterFields = options.filters ?? options.filterFields ?? []
+  const sortableFields = options.sort ?? options.sortableFields ?? []
   const routes: string[] = []
 
   registerResourceOpenApi(openapi, options)
@@ -74,16 +77,16 @@ export const createMockResource = <T extends ResourceItem>(
       const keyword = queryString(request.query.keyword)
       const filters: Partial<Record<ResourceField<T>, string>> = {}
 
-      for (const field of options.filterFields ?? []) {
+      for (const field of filterFields) {
         const value = queryString(request.query[field])
         if (value !== undefined) {
           filters[field] = value
         }
       }
 
-      const filtered = filterItems(searchItems(options.data, keyword, options.searchFields ?? []), filters)
+      const filtered = filterItems(searchItems(options.data, keyword, searchFields), filters)
       const requestedSort = queryString(request.query.sortBy)
-      const sortBy = isAllowedField(options.sortableFields, requestedSort) ? requestedSort : undefined
+      const sortBy = isAllowedField(sortableFields, requestedSort) ? requestedSort : undefined
       const orderValue = queryString(request.query.order)
       const order: SortOrder = orderValue === 'desc' ? 'desc' : 'asc'
       const sorted = sortItems(filtered, sortBy, order)
