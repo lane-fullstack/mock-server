@@ -7,6 +7,18 @@ import { error } from './utils/response.js'
 const MAX_DELAY = 60_000
 const mockStatuses = new Set([401, 403, 404, 429, 500, 503])
 
+/** Logs every completed request with its URL, response status, and duration. */
+export const requestLogger: RequestHandler = (request, response, next) => {
+  const startedAt = Date.now()
+
+  response.on('finish', () => {
+    const duration = Date.now() - startedAt
+    console.log(`[Mock] ${request.method} ${request.originalUrl} -> ${response.statusCode} (${duration}ms)`)
+  })
+
+  next()
+}
+
 const boundedDelay = (value: number | undefined): number => {
   if (value === undefined || value < 0) {
     return config.mockDelay
