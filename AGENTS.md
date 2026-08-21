@@ -26,32 +26,32 @@
 
 ```ts
 export interface Product {
-  id: number
-  name: string
-  price: number
-  createdAt: string
+  id: number;
+  name: string;
+  price: number;
+  createdAt: string;
 }
 ```
 
 ### 2. 添加数据 factory
 
-当前基础数据添加到 `src/factories/index.ts`。以后新增用户、新闻、认证等业务时，按业务创建独立文件，例如 `user.factory.ts`、`news.factory.ts`、`auth.factory.ts`：
+当前基础数据添加到 `src/factories/index.ts`。以后新增用户、新闻、认证等业务时，按业务创建独立文件，例如 `user.ts`、`news.ts`、`auth.ts`：
 
 ```ts
-import type { Product } from '../types.js'
-import { zhFaker } from '../utils/faker.js'
+import type { Product } from "../types.js";
+import { zhFaker } from "../utils/faker.js";
 
 export const createProduct = (id: number): Product => ({
   id,
   name: zhFaker.commerce.productName(),
   price: zhFaker.number.float({ min: 1, max: 999, fractionDigits: 2 }),
   createdAt: zhFaker.date.recent().toISOString(),
-})
+});
 
 export const createProducts = (count: number): Product[] =>
-  Array.from({ length: count }, (_, index) => createProduct(index + 1))
+  Array.from({ length: count }, (_, index) => createProduct(index + 1));
 
-export const products = createProducts(200)
+export const products = createProducts(200);
 ```
 
 factory 必须遵守：
@@ -77,24 +77,24 @@ factory 必须遵守：
 业务资源统一使用 `mock.resource`，不要使用 Express 原生路由或 `mock.get/post/put/patch/delete` 注册资源接口。
 
 ```ts
-import { schema } from '../core/schema.js'
-import { products } from '../factories/index.js'
-import type { Product } from '../types.js'
+import { schema } from "../core/schema.js";
+import { products } from "../factories/index.js";
+import type { Product } from "../types.js";
 
 mock.resource<Product>({
-  name: 'Product',
-  path: '/api/products',
+  name: "Product",
+  path: "/api/products",
   data: products,
-  methods: ['GET', 'POST', 'PATCH'],
+  methods: ["GET", "POST", "PATCH"],
   schema: schema.object({
     id: schema.integer(),
     name: schema.string(),
     price: schema.number(),
     createdAt: schema.dateTime(),
   }),
-  search: ['name'],
-  sort: ['id', 'price', 'createdAt'],
-})
+  search: ["name"],
+  sort: ["id", "price", "createdAt"],
+});
 ```
 
 注册时必须确认：
